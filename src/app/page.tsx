@@ -182,6 +182,8 @@ export default function DeskPage() {
   // view can resolve an issue built from an earlier run. The board is a view of
   // the CURRENT run only, so scope it, otherwise older issue items show up
   // alongside this run's and the same story appears twice.
+  const storeError = state?.storeError ?? null;
+
   const items = (state?.items ?? []).filter(
     (item) => !state?.latestRun || item.runId === state.latestRun.id,
   );
@@ -198,6 +200,15 @@ export default function DeskPage() {
         runError={runError}
         onSendOut={handleSendOut}
       />
+
+      {/* A misconfigured store is the one failure that must not be discovered
+          by clicking Keep and getting a 404. Say it at the top, before the
+          board, with the fix in the message. */}
+      {storeError && (
+        <div className="px-4 pt-3 md:px-6">
+          <ErrorNote message={`Storage is not usable, so nothing Bob does will be saved. ${storeError}`} />
+        </div>
+      )}
 
       {!loading && !state && (
         <div className="px-4 py-3 md:px-6">

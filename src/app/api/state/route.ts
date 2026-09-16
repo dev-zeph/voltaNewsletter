@@ -54,9 +54,25 @@ export async function GET() {
       llm: hasLlm(),
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : String(err) },
-      { status: 500 },
-    );
+    // A store that cannot be used is a configuration problem, not a crash. If
+    // this 500s, the UI shows nothing at all and the person has to go read
+    // server logs to find out why. Return an empty but valid payload instead,
+    // carrying the diagnosis, so the app renders and the sidebar can say
+    // exactly what to fix.
+    const detail = err instanceof Error ? err.message : String(err);
+
+    return NextResponse.json({
+      latestRun: null,
+      runs: [],
+      items: [],
+      recipients: [],
+      sources: [],
+      directives: [],
+      issues: [],
+      transport: transportStatus(),
+      store: { backend: 'file' as const, durable: false, detail },
+      llm: hasLlm(),
+      storeError: detail,
+    });
   }
 }

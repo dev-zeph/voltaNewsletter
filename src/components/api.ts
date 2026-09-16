@@ -43,6 +43,8 @@ export interface StateResponse {
   issues: Issue[];
   transport: TransportInfo;
   store?: StoreInfo;
+  /** Present when storage is unusable. The app still renders so it can say so. */
+  storeError?: string;
   llm: boolean;
 }
 
