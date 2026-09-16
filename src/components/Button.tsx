@@ -32,7 +32,8 @@ export function Button({ variant = 'secondary', size = 'md', className, ...props
     <button
       className={cn(
         'inline-flex items-center justify-center rounded-md border font-medium transition-colors',
-        'disabled:cursor-not-allowed disabled:opacity-50',
+        'active:translate-y-px',
+        'disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-1',
         VARIANT_CLASSES[variant],
         SIZE_CLASSES[size],

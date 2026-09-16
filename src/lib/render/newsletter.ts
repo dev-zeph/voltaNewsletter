@@ -9,13 +9,16 @@ import type { Item, NewsletterPayload } from '@/lib/types';
 // Brand
 // ---------------------------------------------------------------------------
 
-const ACCENT = '#0f6e5f'; // deep teal, reads modern against Volta's dark logo mark
-const INK = '#16181d';
-const MUTED = '#6b7280';
-const RULE = '#e5e7eb';
-const BG = '#f4f5f7';
+// Matched to the app's palette so the tool and the thing it produces read as
+// one system. If Volta has its own brand colour for outbound email, this is the
+// single constant to change: nothing else in this file hardcodes the accent.
+const ACCENT = '#7c3aed';
+const INK = '#17171a';
+const MUTED = '#56565e';
+const RULE = '#e4e2dd';
+const BG = '#f7f6f4';
 const CARD_BG = '#ffffff';
-const TAG_BG = '#e7f4f1';
+const TAG_BG = '#f1ebfe';
 
 // ---------------------------------------------------------------------------
 // Helpers

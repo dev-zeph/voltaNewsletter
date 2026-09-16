@@ -83,6 +83,38 @@ Each of these passed typecheck and looked fine in review.
 | Errand fallback produced **"me anything on ocean tech in Nova Scotia Nova Scotia"** | Conversational scaffolding was being kept as a keyword and the region appended to a phrase that already named it. Both are shown back to the user as directive chips. Now strips filler and checks for a region before scoping. |
 | Dedupe still missed asymmetric headlines | Jaccard punishes length difference, and real headlines about one story are wildly asymmetric. Blended in a length-aware containment score, guarded against over-merging short generic titles. Verified 6/6 on both should-merge and must-not-merge cases. |
 
+## Session two: deployment, Resend, and the Trojan design pass
+
+18. **Vercel MCP** for the deploy: team and project discovery, project creation
+    linked to the GitHub repo, deployment polling, and build logs. Push to
+    `main` now deploys automatically.
+19. **A subagent for git and deployment** with three hard safety checks before
+    anything left the machine: no `.env` tracked, no credential-shaped strings
+    anywhere in the tree, `.data/` untracked. It was also explicitly forbidden
+    from force-pushing and from touching any `buy_*` tool.
+20. **A subagent for the design port**, briefed to source the system from both
+    the live trojancli.com and the local `trojan-web` codebase, and to verify
+    with screenshots of every page rather than a passing build.
+21. **Reading installed type definitions instead of trusting recall** again, for
+    the Resend SDK. `emails.send` returns `{ data, error }` and does not throw
+    on an API error, which is exactly the kind of thing a memory-written
+    integration gets wrong silently.
+22. **A real preflight**, `npm run check`, that sends an actual Claude request,
+    lists Resend domains, and does a Supabase write round-trip. A key being
+    present in a file proves nothing.
+
+### Two more defects found by running it
+
+| Found | Why it mattered |
+|---|---|
+| **Setting the Supabase variables took the whole app down** | Credentials get pasted before anyone opens the SQL editor, so "configured but no schema" is the common path, not an edge case. Every request died with `Could not find the table public.bob_recipients`. It also broke the project's own stated rule that storage should degrade rather than fail. The store now probes once, falls back to files, and reports a message that names the fix. |
+| **`.data/` writes would throw `EROFS` on Vercel** | Only `/tmp` is writable there. The preview writer now targets `/tmp` when `VERCEL` is set, so the dry-run fallback cannot explode inside an error handler. |
+
+### Verified in production
+
+A real run on the deployed app: 10 of 10 sources, 156 raw items, 30 surfaced,
+7.2 seconds end to end.
+
 ## What is honestly weak
 
 - **The people-vs-org entity split** is a regex with a role-word heuristic. It is

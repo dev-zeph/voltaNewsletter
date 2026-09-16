@@ -26,7 +26,7 @@ export function FilterBar({
         <select
           value={filters.section}
           onChange={(e) => onChange({ ...filters, section: e.target.value as Section | 'all' })}
-          className="rounded-md border border-[var(--border)] bg-white px-2 py-1.5 text-sm text-[var(--foreground)]"
+          className="rounded-md border border-[var(--control-border)] bg-white px-2 py-1.5 text-sm text-[var(--foreground)]"
         >
           <option value="all">All sections</option>
           {SECTIONS.map((s) => (
@@ -39,7 +39,7 @@ export function FilterBar({
         <select
           value={filters.audience}
           onChange={(e) => onChange({ ...filters, audience: e.target.value as AudienceTag | 'all' })}
-          className="rounded-md border border-[var(--border)] bg-white px-2 py-1.5 text-sm text-[var(--foreground)]"
+          className="rounded-md border border-[var(--control-border)] bg-white px-2 py-1.5 text-sm text-[var(--foreground)]"
         >
           <option value="all">All audiences</option>
           {AUDIENCE_TAGS.map((a) => (
@@ -74,7 +74,7 @@ export function FilterBar({
         </label>
       </div>
 
-      <div className="flex items-center gap-3 text-xs text-[var(--muted)]">
+      <div className="flex items-center gap-3 font-mono text-xs text-[var(--muted)]">
         <span className="font-medium text-[var(--accent-strong)]">{formatNumber(counts.keep)} kept</span>
         <span>{formatNumber(counts.drop)} dropped</span>
         <span>{formatNumber(counts.pending)} pending</span>

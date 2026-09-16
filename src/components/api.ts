@@ -20,10 +20,17 @@ import type {
 } from '@/lib/types';
 
 export interface TransportInfo {
-  transport: 'smtp' | 'dry-run';
+  transport: 'resend' | 'smtp' | 'dry-run';
   ready: boolean;
   detail: string;
   from: string;
+}
+
+export interface StoreInfo {
+  backend: 'supabase' | 'file';
+  /** False means the data will not survive a serverless deploy. */
+  durable: boolean;
+  detail: string;
 }
 
 export interface StateResponse {
@@ -35,6 +42,7 @@ export interface StateResponse {
   directives: Directive[];
   issues: Issue[];
   transport: TransportInfo;
+  store?: StoreInfo;
   llm: boolean;
 }
 

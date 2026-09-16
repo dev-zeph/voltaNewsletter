@@ -35,7 +35,7 @@ function Shell({ children }: { children: ReactNode }) {
           </span>
           <div className="leading-tight">
             <p className="text-sm font-semibold text-[var(--foreground)]">Bob</p>
-            <p className="text-xs text-[var(--muted)]">for Volta</p>
+            <p className="label-eyebrow text-[10px] text-[var(--muted-2)]">for Volta</p>
           </div>
         </div>
 
@@ -92,7 +92,7 @@ function StatusStrip() {
   return (
     <dl className="space-y-1.5 text-xs text-[var(--muted)]">
       <div className="flex items-center justify-between gap-2">
-        <dt>Brain</dt>
+        <dt className="label-eyebrow text-[10px] text-[var(--muted-2)]">Brain</dt>
         <dd
           className={cn(
             'inline-flex items-center gap-1 font-medium',
@@ -106,7 +106,7 @@ function StatusStrip() {
         </dd>
       </div>
       <div className="flex items-center justify-between gap-2">
-        <dt>Mail</dt>
+        <dt className="label-eyebrow text-[10px] text-[var(--muted-2)]">Mail</dt>
         <dd
           className={cn(
             'inline-flex items-center gap-1 font-medium',
@@ -120,11 +120,36 @@ function StatusStrip() {
               state.transport.ready ? 'bg-emerald-500' : 'bg-amber-500'
             )}
           />
-          {state.transport.transport === 'smtp' ? 'SMTP' : 'Dry run'}
+          {state.transport.transport === 'resend'
+            ? 'Resend'
+            : state.transport.transport === 'smtp'
+              ? 'SMTP'
+              : 'Dry run'}
+        </dd>
+      </div>
+      {/* Whether anything Bob does actually survives. A deployed Bob on the
+          file backend looks fine right up until the function recycles, so this
+          row says so out loud rather than letting it be discovered later. */}
+      <div className="flex items-center justify-between gap-2">
+        <dt className="label-eyebrow text-[10px] text-[var(--muted-2)]">Storage</dt>
+        <dd
+          className={cn(
+            'inline-flex items-center gap-1 font-medium',
+            state.store?.durable ? 'text-emerald-700' : 'text-amber-700'
+          )}
+          title={state.store?.detail}
+        >
+          <span
+            className={cn(
+              'h-1.5 w-1.5 rounded-full',
+              state.store?.durable ? 'bg-emerald-500' : 'bg-amber-500'
+            )}
+          />
+          {state.store?.backend === 'supabase' ? 'Supabase' : 'Local files'}
         </dd>
       </div>
       <div className="flex items-center justify-between gap-2">
-        <dt>Last run</dt>
+        <dt className="label-eyebrow text-[10px] text-[var(--muted-2)]">Last run</dt>
         <dd className="font-medium text-[var(--foreground)]">
           {state.latestRun ? formatRelativeTime(state.latestRun.finishedAt ?? state.latestRun.startedAt) : 'never'}
         </dd>

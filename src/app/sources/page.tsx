@@ -113,7 +113,7 @@ export default function SourcesPage() {
   return (
     <div className="space-y-8 px-4 py-5 md:px-6">
       <div>
-        <h1 className="text-lg font-semibold text-[var(--foreground)]">Sources</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-[var(--foreground)]">Sources</h1>
         <p className="text-sm text-[var(--muted)]">
           Where Bob looks, and what it would take to unlock the sources that are not on yet.
         </p>

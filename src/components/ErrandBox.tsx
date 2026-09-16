@@ -57,7 +57,7 @@ export function ErrandBox({
           placeholder={PLACEHOLDER}
           rows={2}
           disabled={running}
-          className="min-h-[2.5rem] flex-1 resize-none rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-2)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+          className="min-h-[2.5rem] flex-1 resize-none rounded-md border border-[var(--control-border)] bg-white px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-2)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
         />
         <Button variant="primary" onClick={submit} disabled={running || !text.trim()}>
           Send Bob back out

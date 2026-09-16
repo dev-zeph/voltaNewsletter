@@ -45,7 +45,7 @@ export default function ArchivePage() {
   return (
     <div className="space-y-8 px-4 py-5 md:px-6">
       <div>
-        <h1 className="text-lg font-semibold text-[var(--foreground)]">Archive</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-[var(--foreground)]">Archive</h1>
         <p className="text-sm text-[var(--muted)]">Past newsletters Bob has drafted, and past runs out to fetch.</p>
       </div>
 
@@ -66,7 +66,7 @@ export default function ArchivePage() {
               <div className="overflow-x-auto rounded-lg border border-[var(--border)] bg-white">
                 <table className="w-full min-w-[640px] border-collapse text-sm">
                   <thead>
-                    <tr className="border-b border-[var(--border)] bg-[var(--surface-hover)] text-left text-xs text-[var(--muted)]">
+                    <tr className="border-b border-[var(--border)] bg-[var(--surface-hover)] label-eyebrow text-left text-[11px] text-[var(--muted)]">
                       <th className="px-3 py-2 font-medium">Created</th>
                       <th className="px-3 py-2 font-medium">Subject</th>
                       <th className="px-3 py-2 font-medium">Mode</th>
@@ -124,7 +124,7 @@ export default function ArchivePage() {
               <div className="overflow-x-auto rounded-lg border border-[var(--border)] bg-white">
                 <table className="w-full min-w-[640px] border-collapse text-sm">
                   <thead>
-                    <tr className="border-b border-[var(--border)] bg-[var(--surface-hover)] text-left text-xs text-[var(--muted)]">
+                    <tr className="border-b border-[var(--border)] bg-[var(--surface-hover)] label-eyebrow text-left text-[11px] text-[var(--muted)]">
                       <th className="px-3 py-2 font-medium">Started</th>
                       <th className="px-3 py-2 font-medium">Trigger</th>
                       <th className="px-3 py-2 font-medium">Status</th>

@@ -291,7 +291,7 @@ function ComposeEditor({
           <Link href="/" className="text-xs text-[var(--muted)] hover:text-[var(--accent-strong)] hover:underline">
             &larr; Back to Bob&apos;s Desk
           </Link>
-          <h1 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Compose the newsletter</h1>
+          <h1 className="mt-1 text-xl font-semibold tracking-tight text-[var(--foreground)]">Compose the newsletter</h1>
         </div>
         <div className="flex items-center gap-2">
           {locked ? (

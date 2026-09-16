@@ -58,9 +58,9 @@ export function ItemCard({
       tabIndex={0}
       onFocus={onFocusCard}
       className={cn(
-        'flex flex-col gap-2.5 rounded-lg border bg-white p-4 transition-shadow',
+        'flex flex-col gap-2.5 rounded-lg border bg-white p-4 transition-colors',
         focused && 'ring-2 ring-[var(--accent)]',
-        kept ? 'border-[var(--accent-border)] shadow-[0_0_0_1px_var(--accent-soft)]' : 'border-[var(--border)]'
+        kept ? 'border-[var(--accent)]' : 'border-[var(--border)]'
       )}
     >
       <div className="flex items-start justify-between gap-2">
@@ -108,7 +108,7 @@ export function ItemCard({
           {item.enrichedBy === 'heuristic' && (
             <span
               title="Bob's heuristic scorer handled this one, not Claude."
-              className="rounded border border-[var(--border)] px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-[var(--muted-2)]"
+              className="label-eyebrow rounded border border-[var(--border)] px-1.5 py-0.5 text-[10px] text-[var(--muted-2)]"
             >
               heuristic
             </span>
@@ -117,7 +117,7 @@ export function ItemCard({
         <select
           value={item.section}
           onChange={(e) => onSectionChange(e.target.value as Section)}
-          className="rounded border border-[var(--border)] bg-white px-1.5 py-1 text-xs text-[var(--muted)]"
+          className="rounded border border-[var(--control-border)] bg-white px-1.5 py-1 text-xs text-[var(--muted)]"
         >
           {SECTIONS.map((section) => (
             <option key={section} value={section}>

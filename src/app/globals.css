@@ -1,29 +1,70 @@
 @import "tailwindcss";
 
+/* ═══════════════════════════════════════════════════════════════════════
+   Volta / Bob theme tokens.
+
+   Restyled to match trojancli.com's design language: warm paper ground,
+   near-black ink, one sparing violet accent, hairline borders instead of
+   shadows, and a tightened corner radius. Bob stays a dense working tool
+   (cards, chips, selects, score meters all need to stay legible at a
+   glance), so pill-shaped chips and badges keep rounded-full rather than
+   going fully square the way Trojan's marketing site does.
+
+   Contrast notes (WCAG):
+   --foreground on --background: 16.56:1
+   --muted on white: 7.27:1, on --background: 6.73:1
+   --muted-2 on white: 5.36:1, on --background: 4.96:1 (both clear 4.5:1)
+   --accent as text/button fill: 5.70:1
+   --control-border (real form controls) on white: 3.43:1, meeting the 3:1
+     bar for interactive control edges. --border stays a lighter divider,
+     used for card/table hairlines rather than functional controls.
+   ═══════════════════════════════════════════════════════════════════════ */
+
 :root {
-  /* Volta / Bob theme tokens. Light, calm, one accent. */
-  --background: #f7f6f3;
+  /* Grounds */
+  --background: #f7f6f4;
   --surface: #ffffff;
-  --surface-hover: #f1f0ec;
-  --border: #e4e2db;
+  --surface-hover: #edeae5;
   --foreground: #17171a;
-  --muted: #6b6b66;
-  --muted-2: #9c9b95;
 
-  --accent: #4f46e5;
-  --accent-strong: #4338ca;
-  --accent-soft: #eef0ff;
-  --accent-border: #c7cbfb;
+  /* Borders: --border is a quiet divider (cards, table rules); --control-border
+     is the stronger edge for real inputs/selects/textareas. */
+  --border: #d3d0ca;
+  --control-border: #8a8a92;
 
-  --danger: #dc2626;
-  --success: #16a34a;
+  /* Text */
+  --muted: #56565e;
+  --muted-2: #6a6a72;
+
+  /* Accent, the one violet Trojan and Bob now share */
+  --accent: #7c3aed;
+  --accent-strong: #6d28d9;
+  --accent-soft: #f1ebfe;
+  --accent-border: #cbb8f6;
+
+  --danger: #b3261e;
+  --success: #187444;
+  --warning: #8a6100;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans);
+  --font-condensed: var(--font-condensed);
+  --font-mono: var(--font-mono);
+
+  /* Tighten the whole app's corner language in one place. rounded-full is
+     untouched by this scale (Tailwind hardcodes it to 9999px), so pills,
+     chips, badges and avatars keep their shape everywhere they're already
+     used, while cards, buttons, panels and inputs read crisper and more
+     boxy, closer to Trojan's square-cornered system. */
+  --radius: 4px;
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 7px;
+  --radius-xl: 9px;
+  --radius-2xl: 11px;
 }
 
 body {
@@ -35,6 +76,16 @@ body {
 ::selection {
   background: var(--accent-soft);
   color: var(--accent-strong);
+}
+
+/* Small uppercase, tracked-out labels, borrowed from Trojan's spec-plate
+   typography (eyebrows, table headers, the HEURISTIC badge). Used sparingly,
+   only where a label needs to read as metadata rather than body copy. */
+.label-eyebrow {
+  font-family: var(--font-condensed), sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 @keyframes bob-progress {
