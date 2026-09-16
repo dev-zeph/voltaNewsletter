@@ -17,6 +17,7 @@ const DirectiveSchema = z.object({
   boost: z.array(z.string()),
   suppress: z.array(z.string()),
   extraQueries: z.array(z.string()),
+  researchBriefs: z.array(z.string()),
   extraFeeds: z.array(z.string()),
   focusSections: z.array(z.enum(SECTIONS as [Section, ...Section[]])),
   note: z.string(),
@@ -41,6 +42,16 @@ Turn the instruction into a structured directive with these fields:
   queries such as "ocean technology Nova Scotia startup" or "oceantech
   Halifax funding". Write 1-4 queries. Do not write generic unscoped
   queries when a regional angle is implied.
+- "researchBriefs": plain-English research questions for a web-search agent.
+  Use these for asks that a news search will NOT answer, where the thing is
+  specific and probably not syndicated in any feed: an awards list, a cohort
+  announcement, a program deadline, a specific organisation's recent activity.
+  "Digital Nova Scotia's awards" is exactly this shape: it is a real thing,
+  Bader knows it exists, and no RSS feed carries it. Write it as a question an
+  assistant could go and answer, e.g. "Who won Digital Nova Scotia's most
+  recent awards, and when is the next round". Write 0-2 briefs, and only when
+  a keyword query genuinely would not work. These cost real money and time, so
+  do not use one where extraQueries would do.
 - "extraFeeds": only include a URL here if Bader named an actual website or
   feed URL to check. Available named sources Bob already knows about:
   ${availableSourceNames.join(', ') || 'none'}. If Bader references one of
@@ -131,6 +142,9 @@ function fallbackParse(rawText: string): DirectiveDraft {
     boost,
     suppress,
     extraQueries: extraQueries.slice(0, 4),
+    // Without an LLM there is no way to tell a research brief from a keyword,
+    // so the fallback never invents one. Keyword queries still run.
+    researchBriefs: [],
     extraFeeds: [],
     focusSections,
     note: rawText,
@@ -148,6 +162,7 @@ export async function parseErrand(
       boost: [],
       suppress: [],
       extraQueries: [],
+      researchBriefs: [],
       extraFeeds: [],
       focusSections: [],
       note: '',
@@ -186,6 +201,7 @@ export async function parseErrand(
       boost: parsed.boost,
       suppress: parsed.suppress,
       extraQueries: parsed.extraQueries.slice(0, 4),
+      researchBriefs: parsed.researchBriefs.slice(0, 2),
       extraFeeds: parsed.extraFeeds,
       focusSections: parsed.focusSections,
       note: parsed.note,

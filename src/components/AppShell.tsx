@@ -28,7 +28,14 @@ function Shell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
-      <aside className="flex flex-col gap-4 border-b border-[var(--border)] bg-white px-4 py-3 md:w-60 md:shrink-0 md:border-b-0 md:border-r md:px-5 md:py-6">
+      {/* Sticky and exactly one viewport tall on desktop, so the nav and the
+          status strip stay put while the board scrolls. Without the explicit
+          height the aside stretched to the full page height, which put
+          `mt-auto` at the bottom of the document instead of the screen and
+          took the status strip out of view on any long board.
+          The page itself is still the scroll container, so the errand box's
+          `sticky bottom-0` keeps working. */}
+      <aside className="flex flex-col gap-4 border-b border-[var(--border)] bg-white px-4 py-3 md:sticky md:top-0 md:h-screen md:w-60 md:shrink-0 md:overflow-y-auto md:border-b-0 md:border-r md:px-5 md:py-6">
         <div className="flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-md bg-[var(--accent)] text-sm font-semibold text-white">
             B

@@ -5,6 +5,7 @@
 
 import type { SourceConfig, SourceResult } from '@/lib/types';
 import { fetchRss } from './rss';
+import { fetchAgentSearch } from './agent-search';
 import { fetchGoogleNews } from './gnews';
 import { fetchVoltaEvents, fetchVoltaNews } from './volta';
 
@@ -16,6 +17,8 @@ export async function fetchSource(cfg: SourceConfig): Promise<SourceResult> {
       items = await fetchRss(cfg);
     } else if (cfg.kind === 'gnews') {
       items = await fetchGoogleNews(cfg);
+    } else if (cfg.kind === 'agent') {
+      items = await fetchAgentSearch(cfg);
     } else if (cfg.kind === 'html') {
       items = cfg.id.includes('event') ? await fetchVoltaEvents(cfg) : await fetchVoltaNews(cfg);
     } else {

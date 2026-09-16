@@ -288,6 +288,7 @@ interface Guidance {
   note: string;
   extraQueries: string[];
   extraFeeds: string[];
+  researchBriefs: string[];
 }
 
 function mergeGuidance(directives: Directive[]): Guidance {
@@ -298,6 +299,7 @@ function mergeGuidance(directives: Directive[]): Guidance {
     note: '',
     extraQueries: [],
     extraFeeds: [],
+    researchBriefs: [],
   };
   const notes: string[] = [];
   for (const d of directives) {
@@ -306,6 +308,7 @@ function mergeGuidance(directives: Directive[]): Guidance {
     g.focusSections.push(...d.focusSections);
     g.extraQueries.push(...d.extraQueries);
     g.extraFeeds.push(...d.extraFeeds);
+    g.researchBriefs.push(...(d.researchBriefs ?? []));
     if (d.note) notes.push(d.note);
   }
   g.boost = unique(g.boost);
@@ -313,6 +316,9 @@ function mergeGuidance(directives: Directive[]): Guidance {
   g.focusSections = unique(g.focusSections);
   g.extraQueries = unique(g.extraQueries).slice(0, 6);
   g.extraFeeds = unique(g.extraFeeds).slice(0, 4);
+  // Each brief is a live web-search session costing roughly a minute and real
+  // money. Two is the most that fits comfortably inside the function timeout.
+  g.researchBriefs = unique(g.researchBriefs).slice(0, 2);
   g.note = notes.join(' ');
   return g;
 }
@@ -332,6 +338,19 @@ function ephemeralSources(g: Guidance): SourceConfig[] {
     authority: 0.55,
     builtin: false,
   }));
+  const research: SourceConfig[] = g.researchBriefs.map((brief, i) => ({
+    id: `errand-r-${i}-${slug(brief)}`,
+    name: `Bob researched: ${brief.slice(0, 60)}`,
+    kind: 'agent',
+    url: brief,
+    enabled: true,
+    tier: 0,
+    // Claude reads the page and reports what it found, rather than matching a
+    // headline, so a hit here is usually more on-target than a news query.
+    authority: 0.7,
+    builtin: false,
+  }));
+
   const feeds: SourceConfig[] = g.extraFeeds.map((u, i) => ({
     id: `errand-f-${i}-${slug(u)}`,
     name: `Errand feed: ${hostOf(u)}`,
@@ -342,7 +361,7 @@ function ephemeralSources(g: Guidance): SourceConfig[] {
     authority: 0.6,
     builtin: false,
   }));
-  return [...queries, ...feeds];
+  return [...queries, ...research, ...feeds];
 }
 
 /**

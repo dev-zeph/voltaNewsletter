@@ -14,6 +14,7 @@ import { formatMs, formatNumber } from '@/lib/ui/format';
 const KIND_LABELS: Record<SourceKind, string> = {
   rss: 'RSS feed',
   html: 'Web page (scraped)',
+  agent: 'Claude web search',
   gnews: 'Google News search',
 };
 

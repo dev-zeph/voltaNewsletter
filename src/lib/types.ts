@@ -67,7 +67,14 @@ export const SECTION_ORDER: Section[] = [
 // Sources
 // ---------------------------------------------------------------------------
 
-export type SourceKind = 'rss' | 'html' | 'gnews';
+/**
+ * 'agent' sources are different in kind from the rest: instead of a feed URL,
+ * they carry a plain-English research brief, and Claude runs web search to
+ * satisfy it. They exist because RSS can only find what a publisher chose to
+ * syndicate, and the interesting niche things ("Digital Nova Scotia's awards")
+ * usually are not syndicated anywhere.
+ */
+export type SourceKind = 'rss' | 'html' | 'gnews' | 'agent';
 
 /**
  * Tier 0 works with zero credentials. Tiers 1+ are the "if Bader gives us X"
@@ -172,6 +179,12 @@ export interface Directive {
   extraQueries: string[];
   /** Extra RSS/HTML URLs to pull this time. */
   extraFeeds: string[];
+  /**
+   * Plain-English research briefs for Claude to answer with web search. Used
+   * for asks that no feed covers, where the user knows the thing exists but
+   * not where it lives.
+   */
+  researchBriefs: string[];
   /** Sections to prioritise. */
   focusSections: Section[];
   /** Free text passed into the LLM scorer as standing guidance. */

@@ -3,7 +3,10 @@ import { runBob } from '@/lib/pipeline/run';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 120;
+// An errand can now trigger live web research, which is by far the slowest
+// thing Bob does: roughly 60 to 70 seconds per brief on top of the normal
+// collection sweep. 120s was not enough headroom for two briefs.
+export const maxDuration = 300;
 
 /**
  * "Go back out and get me more on ocean tech, drop the generic AI stuff."
