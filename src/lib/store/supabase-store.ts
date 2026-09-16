@@ -83,20 +83,48 @@ export function checkReachable(): Promise<{ ok: boolean; reason?: string }> {
 
   reachable = (async () => {
     try {
-      const { error } = await db().from('bob_runs').select('id').limit(1);
-      if (!error) return { ok: true };
+      const { error: readError } = await db().from('bob_runs').select('id').limit(1);
 
-      // PGRST205 is "table not in the schema cache", which in practice means
-      // supabase/schema.sql has not been run yet.
-      const missingSchema =
-        error.code === 'PGRST205' || /could not find the table/i.test(error.message);
+      if (readError) {
+        // PGRST205 is "table not in the schema cache", which in practice means
+        // supabase/schema.sql has not been run yet.
+        const missingSchema =
+          readError.code === 'PGRST205' ||
+          /could not find the table/i.test(readError.message);
 
-      return {
-        ok: false,
-        reason: missingSchema
-          ? 'Supabase is configured but the tables do not exist. Run supabase/schema.sql in the Supabase SQL editor.'
-          : `Supabase rejected a read: ${error.message}`,
-      };
+        return {
+          ok: false,
+          reason: missingSchema
+            ? 'Supabase is configured but the tables do not exist. Run supabase/schema.sql in the Supabase SQL editor.'
+            : `Supabase rejected a read: ${readError.message}`,
+        };
+      }
+
+      // A read proves nothing. Bob's entire job is writing, and with RLS on,
+      // SELECT can succeed while every INSERT is refused. Probing with a read
+      // alone picked the Supabase backend and then failed on the first save.
+      const probe = `bob-healthcheck-${Date.now()}`;
+      const { error: writeError } = await db()
+        .from('bob_seen_urls')
+        .upsert({ url: probe });
+
+      if (writeError) {
+        // 42501 is Postgres "insufficient privilege", which here always means
+        // RLS is on and the anon key has no policy allowing writes.
+        const rls =
+          writeError.code === '42501' ||
+          /row-level security/i.test(writeError.message);
+
+        return {
+          ok: false,
+          reason: rls
+            ? 'Supabase tables exist but row level security is blocking writes. Either set SUPABASE_SERVICE_ROLE_KEY, which is the secure fix, or run the RLS block at the bottom of supabase/schema.sql to turn RLS off on these tables.'
+            : `Supabase refused a write: ${writeError.message}`,
+        };
+      }
+
+      await db().from('bob_seen_urls').delete().eq('url', probe);
+      return { ok: true };
     } catch (err) {
       return {
         ok: false,

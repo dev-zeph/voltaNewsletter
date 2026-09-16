@@ -36,9 +36,34 @@ let warned = false;
  * Hard-failing here means a missing SQL migration takes the whole app down,
  * which is a miserable way to discover you forgot a setup step.
  */
+/**
+ * On a serverless host the file store is not a fallback, it is a trap. Each
+ * invocation may land on a different container, so a run writes items to one
+ * /tmp and the very next click looks them up in another and gets a 404. The app
+ * looks like it works and quietly loses everything.
+ *
+ * So: degrade locally, refuse to pretend in production.
+ */
+function mustBeDurable(): boolean {
+  if (process.env.BOB_REQUIRE_DURABLE_STORE === 'false') return false;
+  return Boolean(process.env.VERCEL || process.env.BOB_REQUIRE_DURABLE_STORE);
+}
+
+export class StoreUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'StoreUnavailableError';
+  }
+}
+
 async function resolveBackend(): Promise<typeof fileStore | typeof supabaseStore> {
   if (!supabaseStore.isSupabaseConfigured()) {
     degradedReason = null;
+    if (mustBeDurable()) {
+      throw new StoreUnavailableError(
+        'This deployment has no durable storage. Set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY (or SUPABASE_SERVICE_ROLE_KEY) in the Vercel project, then redeploy. Without them Bob would write to a container filesystem that vanishes between requests, which looks like it works and then loses everything.',
+      );
+    }
     return fileStore;
   }
 
@@ -49,6 +74,13 @@ async function resolveBackend(): Promise<typeof fileStore | typeof supabaseStore
   }
 
   degradedReason = health.reason ?? 'Supabase is unreachable.';
+
+  if (mustBeDurable()) {
+    throw new StoreUnavailableError(
+      `Supabase is configured but not usable, and this deployment has no safe fallback. ${degradedReason}`,
+    );
+  }
+
   if (!warned) {
     warned = true;
     console.warn(
@@ -72,7 +104,18 @@ export async function storeStatus(): Promise<{
   durable: boolean;
   detail: string;
 }> {
-  const backend = await activeBackend();
+  let backend: StoreBackend;
+  try {
+    backend = await activeBackend();
+  } catch (err) {
+    // The status endpoint is how the UI explains the problem, so it is the one
+    // caller that must survive an unusable store.
+    return {
+      backend: 'file',
+      durable: false,
+      detail: err instanceof Error ? err.message : String(err),
+    };
+  }
 
   if (backend === 'supabase') {
     return {

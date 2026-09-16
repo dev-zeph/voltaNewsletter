@@ -199,7 +199,7 @@ export async function runBob(opts: RunOptions): Promise<RunOutcome> {
       .filter((item) => !isStale(item.publishedAt))
       .sort((a, b) => b.score - a.score);
 
-    const items = capBoard(scored);
+    const items = capBoard(dedupeByStory(scored));
 
     run.surfacedCount = items.length;
     run.itemIds = items.map((i) => i.id);
@@ -356,6 +356,98 @@ function isStale(publishedAt: string | null): boolean {
   if (!Number.isFinite(ts)) return false;
   const ageDays = (Date.now() - ts) / 86_400_000;
   return ageDays > MAX_AGE_DAYS;
+}
+
+/**
+ * Second dedupe pass, after enrichment.
+ *
+ * Title similarity cannot catch this case. One funding round produced three
+ * cards: "Halifax space technology company Galaxia raises $4.5M...",
+ * "Galaxia Closes $4.2M Seed Round", and "Galaxia raises $4.5 million to bring
+ * satellite computers...". They share barely three tokens, the reported amounts
+ * disagree, and every one of them is a real, separate article. To a reader they
+ * are the same story three times, sitting at the top of the board.
+ *
+ * Enrichment gives us the handle title text did not: the subject organisation.
+ * Same company, same section, same week is one story.
+ */
+const SAME_STORY_WINDOW_DAYS = 10;
+
+/**
+ * Organisations that co-star in half the region's news. Matching on these would
+ * collapse unrelated stories, so they never act as the story key.
+ */
+const AMBIGUOUS_ORGS = new Set([
+  'volta',
+  'dalhousie',
+  'dalhousie university',
+  'saint mary\'s university',
+  'invest nova scotia',
+  'nova scotia',
+  'atlantic canada',
+  'halifax',
+  'bdc',
+  'betakit',
+  'entrevestor',
+  'acoa',
+  'canada',
+  'government of canada',
+]);
+
+function storyKey(item: Item): string | null {
+  const org = item.entities.orgs?.[0];
+  if (!org) return null;
+
+  const normalised = org
+    .toLowerCase()
+    .replace(/\b(inc|ltd|llc|corp|corporation|limited|technologies|technology|labs|systems)\b/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+  if (!normalised || normalised.length < 3) return null;
+  if (AMBIGUOUS_ORGS.has(normalised)) return null;
+
+  return `${item.section}::${normalised}`;
+}
+
+function dedupeByStory(sorted: Item[]): Item[] {
+  const chosen = new Map<string, Item>();
+  const kept: Item[] = [];
+
+  for (const item of sorted) {
+    const key = storyKey(item);
+    if (!key) {
+      kept.push(item);
+      continue;
+    }
+
+    const existing = chosen.get(key);
+    if (!existing) {
+      chosen.set(key, item);
+      kept.push(item);
+      continue;
+    }
+
+    if (withinDays(existing.publishedAt, item.publishedAt, SAME_STORY_WINDOW_DAYS)) {
+      // The list arrives score-sorted, so the one already kept is the better
+      // write-up of the same story. Drop this one.
+      continue;
+    }
+
+    // Same company, but far enough apart in time to be genuinely different news.
+    chosen.set(key, item);
+    kept.push(item);
+  }
+
+  return kept;
+}
+
+function withinDays(a: string | null, b: string | null, days: number): boolean {
+  if (!a || !b) return true; // Unknown dates: assume same story rather than duplicate it.
+  const ta = Date.parse(a);
+  const tb = Date.parse(b);
+  if (!Number.isFinite(ta) || !Number.isFinite(tb)) return true;
+  return Math.abs(ta - tb) / 86_400_000 <= days;
 }
 
 /**

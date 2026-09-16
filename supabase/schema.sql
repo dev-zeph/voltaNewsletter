@@ -75,3 +75,28 @@ create index if not exists bob_seen_urls_seen_at_idx on bob_seen_urls (seen_at d
 --
 -- Option 1 is the right answer the moment real recipient emails go in here.
 -- ============================================================================
+
+-- ============================================================================
+-- IF BOB REPORTS "row level security is blocking writes"
+--
+-- Supabase enables RLS on new tables. Bob talks to these tables from server
+-- code only, so there are two ways forward. Pick one.
+--
+-- OPTION A, recommended. Leave RLS on and give Bob the service-role key, which
+-- bypasses RLS. Nothing public can touch these tables. Copy the service_role
+-- key from Settings, API in the Supabase dashboard into SUPABASE_SERVICE_ROLE_KEY
+-- (locally and in Vercel). No SQL needed. Do not put that key in a
+-- NEXT_PUBLIC_ variable, and do not commit it.
+--
+-- OPTION B, faster but public. Turn RLS off on these seven tables. Anyone who
+-- finds the project URL can then read and write them. Acceptable for a demo,
+-- not once real subscriber emails are in here. Run this:
+
+-- alter table bob_runs       disable row level security;
+-- alter table bob_items      disable row level security;
+-- alter table bob_directives disable row level security;
+-- alter table bob_recipients disable row level security;
+-- alter table bob_sources    disable row level security;
+-- alter table bob_issues     disable row level security;
+-- alter table bob_seen_urls  disable row level security;
+-- ============================================================================
