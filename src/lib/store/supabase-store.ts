@@ -71,6 +71,43 @@ function unwrap<T>(rows: Array<{ data: unknown }> | null): T[] {
   return (rows ?? []).map((r) => r.data as T);
 }
 
+/**
+ * Cheap probe: is Supabase not just configured, but actually usable? Being
+ * configured proves nothing, the schema still has to have been applied.
+ * Memoized, so this costs one request per process.
+ */
+let reachable: Promise<{ ok: boolean; reason?: string }> | null = null;
+
+export function checkReachable(): Promise<{ ok: boolean; reason?: string }> {
+  if (reachable) return reachable;
+
+  reachable = (async () => {
+    try {
+      const { error } = await db().from('bob_runs').select('id').limit(1);
+      if (!error) return { ok: true };
+
+      // PGRST205 is "table not in the schema cache", which in practice means
+      // supabase/schema.sql has not been run yet.
+      const missingSchema =
+        error.code === 'PGRST205' || /could not find the table/i.test(error.message);
+
+      return {
+        ok: false,
+        reason: missingSchema
+          ? 'Supabase is configured but the tables do not exist. Run supabase/schema.sql in the Supabase SQL editor.'
+          : `Supabase rejected a read: ${error.message}`,
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        reason: err instanceof Error ? err.message : String(err),
+      };
+    }
+  })();
+
+  return reachable;
+}
+
 // --- runs ------------------------------------------------------------------
 
 export async function getRuns(): Promise<Run[]> {

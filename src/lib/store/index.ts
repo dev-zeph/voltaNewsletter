@@ -24,8 +24,42 @@ import * as supabaseStore from '@/lib/store/supabase-store';
 
 export type StoreBackend = 'supabase' | 'file';
 
-export function activeBackend(): StoreBackend {
-  return supabaseStore.isSupabaseConfigured() ? 'supabase' : 'file';
+let degradedReason: string | null = null;
+let warned = false;
+
+/**
+ * Resolves the backend to actually use. Supabase being *configured* proves
+ * nothing: the schema still has to have been applied. If it is configured but
+ * unusable, fall back to files and say why, loudly, once.
+ *
+ * This follows the same rule as the rest of the pipeline: degrade, never fail.
+ * Hard-failing here means a missing SQL migration takes the whole app down,
+ * which is a miserable way to discover you forgot a setup step.
+ */
+async function resolveBackend(): Promise<typeof fileStore | typeof supabaseStore> {
+  if (!supabaseStore.isSupabaseConfigured()) {
+    degradedReason = null;
+    return fileStore;
+  }
+
+  const health = await supabaseStore.checkReachable();
+  if (health.ok) {
+    degradedReason = null;
+    return supabaseStore;
+  }
+
+  degradedReason = health.reason ?? 'Supabase is unreachable.';
+  if (!warned) {
+    warned = true;
+    console.warn(
+      `[bob] Falling back to the local file store. ${degradedReason}`,
+    );
+  }
+  return fileStore;
+}
+
+export async function activeBackend(): Promise<StoreBackend> {
+  return (await resolveBackend()) === supabaseStore ? 'supabase' : 'file';
 }
 
 /**
@@ -33,37 +67,47 @@ export function activeBackend(): StoreBackend {
  * next deploy. A deployed Bob on the file backend looks like it is working
  * right up until the function recycles, which is the worst way to find out.
  */
-export function storeStatus(): {
+export async function storeStatus(): Promise<{
   backend: StoreBackend;
   durable: boolean;
   detail: string;
-} {
-  if (activeBackend() === 'supabase') {
+}> {
+  const backend = await activeBackend();
+
+  if (backend === 'supabase') {
     return {
-      backend: 'supabase',
+      backend,
       durable: true,
       detail: 'Runs, items and issues persist to Supabase.',
     };
   }
+
+  if (degradedReason) {
+    return {
+      backend,
+      durable: false,
+      detail: `${degradedReason} Bob is using local JSON files in the meantime, so nothing is lost on your machine, but a deploy will not keep anything.`,
+    };
+  }
+
   return {
-    backend: 'file',
+    backend,
     durable: false,
     detail:
       'Storing to local JSON files under .data/. Fine on your machine. On a serverless deploy this is lost between requests, so set the Supabase variables before relying on it.',
   };
 }
 
-const backend = () =>
-  activeBackend() === 'supabase' ? supabaseStore : fileStore;
+const backend = resolveBackend;
 
 // --- runs ------------------------------------------------------------------
 
-export function getRuns(): Promise<Run[]> {
-  return backend().getRuns();
+export async function getRuns(): Promise<Run[]> {
+  return (await backend()).getRuns();
 }
 
-export function getRun(id: string): Promise<Run | null> {
-  return backend().getRun(id);
+export async function getRun(id: string): Promise<Run | null> {
+  return (await backend()).getRun(id);
 }
 
 export async function getLatestRun(): Promise<Run | null> {
@@ -71,35 +115,35 @@ export async function getLatestRun(): Promise<Run | null> {
   return runs[0] ?? null;
 }
 
-export function saveRun(run: Run): Promise<void> {
-  return backend().saveRun(run);
+export async function saveRun(run: Run): Promise<void> {
+  return (await backend()).saveRun(run);
 }
 
 // --- items -----------------------------------------------------------------
 
-export function getItems(runId?: string): Promise<Item[]> {
-  return backend().getItems(runId);
+export async function getItems(runId?: string): Promise<Item[]> {
+  return (await backend()).getItems(runId);
 }
 
-export function getItemsByIds(ids: string[]): Promise<Item[]> {
-  return backend().getItemsByIds(ids);
+export async function getItemsByIds(ids: string[]): Promise<Item[]> {
+  return (await backend()).getItemsByIds(ids);
 }
 
-export function saveItems(items: Item[]): Promise<void> {
-  return backend().saveItems(items);
+export async function saveItems(items: Item[]): Promise<void> {
+  return (await backend()).saveItems(items);
 }
 
-export function updateItem(
+export async function updateItem(
   id: string,
   patch: Partial<Item>,
 ): Promise<Item | null> {
-  return backend().updateItem(id, patch);
+  return (await backend()).updateItem(id, patch);
 }
 
 // --- directives ------------------------------------------------------------
 
-export function getDirectives(): Promise<Directive[]> {
-  return backend().getDirectives();
+export async function getDirectives(): Promise<Directive[]> {
+  return (await backend()).getDirectives();
 }
 
 /** The standing guidance Bob carries into every future run. */
@@ -108,54 +152,54 @@ export async function getPersistentDirectives(): Promise<Directive[]> {
   return all.filter((d) => d.persistent);
 }
 
-export function saveDirective(d: Directive): Promise<void> {
-  return backend().saveDirective(d);
+export async function saveDirective(d: Directive): Promise<void> {
+  return (await backend()).saveDirective(d);
 }
 
-export function deleteDirective(id: string): Promise<void> {
-  return backend().deleteDirective(id);
+export async function deleteDirective(id: string): Promise<void> {
+  return (await backend()).deleteDirective(id);
 }
 
 // --- recipients & sources --------------------------------------------------
 
-export function getRecipients(): Promise<Recipient[]> {
-  return backend().getRecipients();
+export async function getRecipients(): Promise<Recipient[]> {
+  return (await backend()).getRecipients();
 }
 
-export function saveRecipients(list: Recipient[]): Promise<void> {
-  return backend().saveRecipients(list);
+export async function saveRecipients(list: Recipient[]): Promise<void> {
+  return (await backend()).saveRecipients(list);
 }
 
-export function getSources(): Promise<SourceConfig[]> {
-  return backend().getSources();
+export async function getSources(): Promise<SourceConfig[]> {
+  return (await backend()).getSources();
 }
 
-export function saveSources(list: SourceConfig[]): Promise<void> {
-  return backend().saveSources(list);
+export async function saveSources(list: SourceConfig[]): Promise<void> {
+  return (await backend()).saveSources(list);
 }
 
 // --- issues ----------------------------------------------------------------
 
-export function getIssues(): Promise<Issue[]> {
-  return backend().getIssues();
+export async function getIssues(): Promise<Issue[]> {
+  return (await backend()).getIssues();
 }
 
-export function getIssue(id: string): Promise<Issue | null> {
-  return backend().getIssue(id);
+export async function getIssue(id: string): Promise<Issue | null> {
+  return (await backend()).getIssue(id);
 }
 
-export function saveIssue(issue: Issue): Promise<void> {
-  return backend().saveIssue(issue);
+export async function saveIssue(issue: Issue): Promise<void> {
+  return (await backend()).saveIssue(issue);
 }
 
 // --- seen urls -------------------------------------------------------------
 
-export function getSeenUrls(): Promise<Set<string>> {
-  return backend().getSeenUrls();
+export async function getSeenUrls(): Promise<Set<string>> {
+  return (await backend()).getSeenUrls();
 }
 
-export function addSeenUrls(urls: string[]): Promise<void> {
-  return backend().addSeenUrls(urls);
+export async function addSeenUrls(urls: string[]): Promise<void> {
+  return (await backend()).addSeenUrls(urls);
 }
 
 // The email preview writer needs a directory even on the Supabase backend.

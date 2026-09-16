@@ -27,11 +27,26 @@ Three things Bob can make for free that nobody at Volta has time to make today:
 
 ```bash
 npm install
-cp .env.example .env.local     # optional, see below
 npm run dev
 ```
 
 Open http://localhost:3000 and press **Send Bob out**.
+
+### Turning on the paid parts
+
+`.env.local` is already scaffolded with the Supabase values filled in and two
+blanks to paste into. Then:
+
+```bash
+npm run check     # verifies every credential with a real call
+```
+
+`npm run check` is not a config linter. It sends one small request to Claude,
+lists your Resend domains, and does a write round-trip against Supabase, because
+a key being present in a file tells you nothing about whether it works.
+
+One manual step for Supabase: open the SQL editor in your project and run
+`supabase/schema.sql`. Seven tables, one paste, once.
 
 **It works with no credentials at all.** Every external dependency sits behind an
 adapter with a real fallback:
@@ -39,7 +54,8 @@ adapter with a real fallback:
 | Without a key | What happens |
 |---|---|
 | No `ANTHROPIC_API_KEY` | The heuristic scorer runs: recency decay, source authority, Atlantic Canada geographic relevance, section value, keyword boosts. Lower quality copy, same working product. |
-| No `SMTP_*` | Sending writes a rendered HTML file to `.data/previews/` and logs the recipient split. The artifact is real, the email just does not leave the building. |
+| No `RESEND_API_KEY` or `SMTP_*` | Sending writes a rendered HTML file to `.data/previews/` and logs the recipient split. The artifact is real, the email just does not leave the building. |
+| No `SUPABASE_*` | Storage falls back to JSON files under `.data/`. Correct on your machine, and quietly wrong on any serverless host. |
 
 Add the keys and the same code paths light up. Nothing is a stub.
 
@@ -87,10 +103,24 @@ environment variable and a toggle that is already wired.
 
 ## Storage
 
-`.data/*.json` through a single module, `src/lib/store/index.ts`. Deliberately
-boring: no database to provision, works the moment you clone. Every read and
-write goes through that file, so swapping in Postgres for a real Vercel
-deployment is one file, not a refactor.
+Two backends behind one dispatcher, `src/lib/store/index.ts`:
+
+- **Supabase**, when `SUPABASE_URL` and a key are set. Required for any
+  deployment.
+- **JSON files** under `.data/` otherwise. Zero setup, works the moment you
+  clone.
+
+This distinction is not cosmetic. Vercel's filesystem is ephemeral, so a
+deployed Bob on the file backend looks like it is working right up until the
+function recycles and every run vanishes. `/api/state` reports which backend is
+live and whether it is durable, so the UI can say so out loud.
+
+**Security note on the Supabase setup as shipped:** it uses the publishable
+(anon) key with RLS off, which means anyone who finds the project URL can read
+and write those tables. That is a deliberate demo trade. Before this holds a
+real subscriber list, turn RLS on with no public policies and set
+`SUPABASE_SERVICE_ROLE_KEY` instead. Bob is entirely server-side, so nothing in
+the browser breaks. `supabase/schema.sql` says the same thing at the bottom.
 
 ## Scheduling
 

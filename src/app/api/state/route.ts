@@ -19,11 +19,12 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const { sources, recipients } = await ensureSeeded();
-    const [latestRun, directives, issues, runs] = await Promise.all([
+    const [latestRun, directives, issues, runs, store] = await Promise.all([
       getLatestRun(),
       getDirectives(),
       getIssues(),
       getRuns(),
+      storeStatus(),
     ]);
     const runItems = latestRun ? await getItems(latestRun.id) : [];
 
@@ -49,7 +50,7 @@ export async function GET() {
       directives,
       issues,
       transport: transportStatus(),
-      store: storeStatus(),
+      store,
       llm: hasLlm(),
     });
   } catch (err) {
