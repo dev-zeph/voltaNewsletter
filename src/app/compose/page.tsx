@@ -42,7 +42,7 @@ function ComposeSkeleton() {
 }
 
 function ComposeInner() {
-  const { state, setState, loading, error, reachable, refetch } = useBobState();
+  const { state, loading, error, reachable, refetch } = useBobState();
   const searchParams = useSearchParams();
   const paramIssueId = searchParams.get('issue');
 
@@ -76,7 +76,7 @@ function ComposeInner() {
           description="There is no newsletter draft to edit. Keep a few cards on Bob's Desk and build the newsletter from there, then come back."
           action={
             <Link href="/">
-              <Button variant="primary">Go to Bob's Desk</Button>
+              <Button variant="primary">Go to Bob&apos;s Desk</Button>
             </Link>
           }
         />
@@ -100,15 +100,17 @@ function ComposeEditor({
   transportDetail: string;
   transportReady: boolean;
 }) {
-  const { state, setState } = useBobState();
+  const { setState } = useBobState();
   const locked = issue.status === 'sent';
 
   const itemsById = useMemo(() => new Map(items.map((it) => [it.id, it])), [items]);
 
   // Bumped on every successful save so the preview iframe key changes and reloads.
-  const previewVersionRef = useRef(0);
+  const [previewVersion, setPreviewVersion] = useState(0);
 
   // ---- editable text fields, debounce-saved ----
+  // This component is remounted (fresh state) whenever the parent changes
+  // `key={issue.id}`, so these only need to initialize from the issue once.
   const [subject, setSubject] = useState(issue.subject);
   const [intro, setIntro] = useState(issue.intro);
   const [signoff, setSignoff] = useState(issue.signoff);
@@ -119,21 +121,13 @@ function ComposeEditor({
   const savedFadeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    setSubject(issue.subject);
-    setIntro(issue.intro);
-    setSignoff(issue.signoff);
-    dirtyRef.current = false;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [issue.id]);
-
-  useEffect(() => {
     if (!dirtyRef.current) return;
     const timer = setTimeout(async () => {
       setSaving(true);
       setFieldError(null);
       try {
         const { issue: updated } = await patchIssue(issue.id, { subject, intro, signoff });
-        previewVersionRef.current += 1;
+        setPreviewVersion((v) => v + 1);
         setState((s) => (s ? { ...s, issues: s.issues.map((i) => (i.id === updated.id ? updated : i)) } : s));
         dirtyRef.current = false;
         setJustSaved(true);
@@ -162,12 +156,10 @@ function ComposeEditor({
   // ---- mode + audience tabs ----
   const [modeError, setModeError] = useState<string | null>(null);
   const [modeSaving, setModeSaving] = useState(false);
-  const [audience, setAudience] = useState<AudienceTag | 'all'>('all');
-
-  useEffect(() => {
-    if (issue.mode === 'single') setAudience('all');
-    else setAudience((prev) => (prev === 'all' ? AUDIENCE_TAGS[0] : prev));
-  }, [issue.mode]);
+  // Only meaningful in segmented mode. Single mode always previews 'all',
+  // derived below rather than synced back and forth with an effect.
+  const [selectedAudience, setSelectedAudience] = useState<AudienceTag>(AUDIENCE_TAGS[0]);
+  const audience: AudienceTag | 'all' = issue.mode === 'segmented' ? selectedAudience : 'all';
 
   async function handleModeChange(mode: IssueMode) {
     if (locked || mode === issue.mode) return;
@@ -177,7 +169,7 @@ function ComposeEditor({
     setState((s) => (s ? { ...s, issues: s.issues.map((i) => (i.id === issue.id ? { ...i, mode } : i)) } : s));
     try {
       const { issue: updated } = await patchIssue(issue.id, { mode });
-      previewVersionRef.current += 1;
+      setPreviewVersion((v) => v + 1);
       setState((s) => (s ? { ...s, issues: s.issues.map((i) => (i.id === updated.id ? updated : i)) } : s));
     } catch (e) {
       setState((s) => (s ? { ...s, issues: s.issues.map((i) => (i.id === issue.id ? previous : i)) } : s));
@@ -205,7 +197,7 @@ function ComposeEditor({
     setState((s) => (s ? { ...s, issues: s.issues.map((i) => (i.id === issue.id ? { ...i, sections: next } : i)) } : s));
     try {
       const { issue: updated } = await patchIssue(issue.id, { sections: next });
-      previewVersionRef.current += 1;
+      setPreviewVersion((v) => v + 1);
       setState((s) => (s ? { ...s, issues: s.issues.map((i) => (i.id === updated.id ? updated : i)) } : s));
     } catch (e) {
       setState((s) => (s ? { ...s, issues: s.issues.map((i) => (i.id === issue.id ? { ...i, sections: previous } : i)) } : s));
@@ -241,7 +233,7 @@ function ComposeEditor({
   // ---- preview ----
   // versionRef bumps whenever a save actually lands, so the iframe key below
   // changes and the preview reloads. Derived at save time, not via an effect.
-  const previewKey = `${issue.id}:${issue.mode}:${audience}:${previewVersionRef.current}`;
+  const previewKey = `${issue.id}:${issue.mode}:${audience}:${previewVersion}`;
   const src = previewUrl(issue.id, issue.mode === 'segmented' ? audience : 'all');
 
   // ---- send panel ----
@@ -362,7 +354,7 @@ function ComposeEditor({
                   <button
                     key={tag}
                     type="button"
-                    onClick={() => setAudience(tag)}
+                    onClick={() => setSelectedAudience(tag)}
                     className={cn(
                       'rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
                       audience === tag

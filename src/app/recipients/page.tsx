@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { AudienceTag, Recipient } from '@/lib/types';
 import { AUDIENCE_LABELS, AUDIENCE_TAGS } from '@/lib/types';
 import { useBobState } from '@/components/BobStateContext';
@@ -33,11 +33,14 @@ export default function RecipientsPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!state || initialized) return;
-    setRows(state.recipients.map((r) => ({ ...r, tags: [...r.tags] })));
+  // One-time snapshot of server data into the editable table. This runs
+  // during render (React's documented pattern for adjusting state from a
+  // prop/data change) rather than in an effect, so it takes effect on the
+  // same render the data arrives instead of one render later.
+  if (state && !initialized) {
     setInitialized(true);
-  }, [state, initialized]);
+    setRows(state.recipients.map((r) => ({ ...r, tags: [...r.tags] })));
+  }
 
   const invalidIds = useMemo(() => {
     const bad = new Set<string>();

@@ -78,6 +78,9 @@ Each of these passed typecheck and looked fine in review.
 | Then they read **"Volta Volta update"** | The fix introduced a duplicated word. Caught on the next run. |
 | Events three weeks out read **"published today"** | Event listings carry the date the thing happens. Future dates now read "happening in 12 days", which is the fact that makes an event worth including. |
 | Dedupe missed `$4.2 million` vs `$4.2M` | Money tokenises differently across outlets, so the same round survived as three cards. Amounts are now normalised to one canonical token. |
+| Email event tags printed **`2026-09-16T21:00:00.000Z`** | The one tag whose entire job is telling a reader when to show up was printing a raw ISO timestamp. Now reads "Wed, Sep 16, 6:00 p.m.", with midnight treated as "no time published". |
+| Fallback subject line was **"Yoga: what's new at Volta"** | The deterministic composer picked the shortest title, and an issue that led with two funding rounds went out titled after a yoga class. Now ranks by section newsworthiness and skips titles too short to carry a subject. |
+| Errand fallback produced **"me anything on ocean tech in Nova Scotia Nova Scotia"** | Conversational scaffolding was being kept as a keyword and the region appended to a phrase that already named it. Both are shown back to the user as directive chips. Now strips filler and checks for a region before scoping. |
 | Dedupe still missed asymmetric headlines | Jaccard punishes length difference, and real headlines about one story are wildly asymmetric. Blended in a length-aware containment score, guarded against over-merging short generic titles. Verified 6/6 on both should-merge and must-not-merge cases. |
 
 ## What is honestly weak

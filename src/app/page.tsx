@@ -45,18 +45,23 @@ export default function DeskPage() {
   const [building, setBuilding] = useState(false);
   const [buildError, setBuildError] = useState<string | null>(null);
 
+  // The first message is derived during render rather than seeded with a
+  // synchronous setState, so the effect only ever updates state from a timer.
+  const displayedProgress = running
+    ? (progressMessage ?? PROGRESS_MESSAGES[0])
+    : null;
+
   useEffect(() => {
-    if (!running) {
-      setProgressMessage(null);
-      return;
-    }
+    if (!running) return;
     let i = 0;
-    setProgressMessage(PROGRESS_MESSAGES[0]);
     const interval = setInterval(() => {
       i = (i + 1) % PROGRESS_MESSAGES.length;
       setProgressMessage(PROGRESS_MESSAGES[i]);
     }, 3500);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      setProgressMessage(null);
+    };
   }, [running]);
 
   const handleSendOut = useCallback(async () => {
@@ -173,7 +178,13 @@ export default function DeskPage() {
     }
   }
 
-  const items = state?.items ?? [];
+  // `/api/state` also ships the items belonging to recent issues so the compose
+  // view can resolve an issue built from an earlier run. The board is a view of
+  // the CURRENT run only, so scope it, otherwise older issue items show up
+  // alongside this run's and the same story appears twice.
+  const items = (state?.items ?? []).filter(
+    (item) => !state?.latestRun || item.runId === state.latestRun.id,
+  );
   const keptCount = items.filter((i) => i.decision === 'keep').length;
   const dropCount = items.filter((i) => i.decision === 'drop').length;
   const pendingCount = items.filter((i) => i.decision === 'pending').length;
@@ -183,7 +194,7 @@ export default function DeskPage() {
       <BobMessage
         run={state?.latestRun ?? null}
         running={running}
-        progressMessage={progressMessage}
+        progressMessage={displayedProgress}
         runError={runError}
         onSendOut={handleSendOut}
       />

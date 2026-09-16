@@ -50,9 +50,39 @@ export function BobStateProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // The initial fetch deliberately does not reuse `load`: `load` sets loading
+  // state synchronously, and a synchronous setState in an effect body triggers
+  // a cascading render (and React 16's hooks lint rejects it). `loading` and
+  // `loaded` already start in the right state for a first load, so the only
+  // updates here happen after the await.
   useEffect(() => {
-    load();
-  }, [load]);
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const data = await fetchState();
+        if (cancelled) return;
+        setState(data);
+        setReachable(true);
+      } catch (e) {
+        if (cancelled) return;
+        const apiError = e instanceof ApiError ? e : null;
+        setReachable(
+          apiError ? apiError.status !== 0 && apiError.status !== 404 : false,
+        );
+        setError(e instanceof Error ? e.message : 'Something went wrong loading Bob.');
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+          setLoaded(true);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <BobStateContext.Provider

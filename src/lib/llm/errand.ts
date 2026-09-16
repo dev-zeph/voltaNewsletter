@@ -77,18 +77,43 @@ function fallbackParse(rawText: string): DirectiveDraft {
     .map((c) => c.trim())
     .filter((c) => c.length > 0);
 
-  const BOOST_LEAD = /^(more|find|get|add|include|look for)\b\s*/i;
-  const SUPPRESS_LEAD = /^(less|drop|no|remove|stop|skip|without)\b\s*/i;
+  const BOOST_LEAD = /^(more|find|get|add|include|look for|look into|dig into)\b\s*/i;
+  const SUPPRESS_LEAD = /^(less|drop|no|remove|stop|skip|without|cut)\b\s*/i;
+
+  /**
+   * Strips the conversational scaffolding a person naturally types. "find me
+   * anything on ocean tech" should yield "ocean tech", not "me anything on
+   * ocean tech", because this string is shown back to the user as a directive
+   * chip and pushed into a search query.
+   */
+  const FILLER = /^(me|us|any|anything|some|something|all|the|a|an|about|on|of|for|with|regarding|re|stuff|news|info|information|more)\b\s*/i;
+  const TRAILING_FILLER = /\s*\b(stuff|things|news|content|items?)\b$/i;
+
+  const tidy = (raw: string): string => {
+    let topic = raw.trim();
+    // Peel repeated leading filler: "find me any more stuff about X".
+    for (let i = 0; i < 6 && FILLER.test(topic); i++) {
+      topic = topic.replace(FILLER, '').trim();
+    }
+    topic = topic.replace(TRAILING_FILLER, '').trim();
+    return topic.replace(/[.!?]+$/, '').trim();
+  };
+
+  const REGION = /\b(nova scotia|halifax|atlantic canada|new brunswick|newfoundland|pei|moncton|dartmouth)\b/i;
 
   for (const clause of clauses) {
     if (BOOST_LEAD.test(clause)) {
-      const topic = clause.replace(BOOST_LEAD, '').trim();
+      const topic = tidy(clause.replace(BOOST_LEAD, ''));
       if (topic) {
         boost.push(topic);
-        extraQueries.push(`${topic} Nova Scotia`);
+        // Only scope the query to the region when the user has not already
+        // named one, otherwise you get "ocean tech Nova Scotia Nova Scotia".
+        extraQueries.push(
+          REGION.test(topic) ? topic : `${topic} Nova Scotia`,
+        );
       }
     } else if (SUPPRESS_LEAD.test(clause)) {
-      const topic = clause.replace(SUPPRESS_LEAD, '').trim();
+      const topic = tidy(clause.replace(SUPPRESS_LEAD, ''));
       if (topic) suppress.push(topic);
     }
 

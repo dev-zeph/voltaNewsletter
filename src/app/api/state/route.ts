@@ -6,6 +6,7 @@ import {
   getDirectives,
   getIssues,
   getItems,
+  getItemsByIds,
   getLatestRun,
   getRuns,
 } from '@/lib/store';
@@ -23,7 +24,20 @@ export async function GET() {
       getIssues(),
       getRuns(),
     ]);
-    const items = latestRun ? await getItems(latestRun.id) : [];
+    const runItems = latestRun ? await getItems(latestRun.id) : [];
+
+    // An issue can reference items from whatever run built it, which is not
+    // always the latest one. Shipping only the latest run's items left the
+    // compose view unable to resolve an older issue's contents, so include
+    // everything the recent issues point at as well.
+    const issueItemIds = [
+      ...new Set(issues.slice(0, 5).flatMap((i) => i.sections.flatMap((s) => s.itemIds))),
+    ];
+    const issueItems = await getItemsByIds(issueItemIds);
+
+    const byId = new Map(runItems.map((i) => [i.id, i]));
+    for (const item of issueItems) if (!byId.has(item.id)) byId.set(item.id, item);
+    const items = [...byId.values()];
 
     return NextResponse.json({
       latestRun,

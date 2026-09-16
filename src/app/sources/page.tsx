@@ -260,10 +260,10 @@ function LockedSourceCard({ source }: { source: SourceConfig }) {
     <div className="space-y-2 rounded-lg border border-[var(--border)] bg-white p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="font-medium text-[var(--foreground)]">{source.name}</span>
-        <div className="flex items-center gap-1.5">
-          <Pill tone="neutral">{KIND_LABELS[source.kind]}</Pill>
-          <Pill tone="accent">Tier {source.tier}</Pill>
-        </div>
+        {/* No kind pill here. These are not connected, so "Web page (scraped)"
+            describes a placeholder rather than how the source would actually be
+            read, and it reads as a mistake next to LinkedIn or Crunchbase. */}
+        <Pill tone="accent">Tier {source.tier}</Pill>
       </div>
       {source.requires && (
         <p className="rounded-md border border-[var(--border)] bg-[var(--surface-hover)] px-2.5 py-2 text-sm text-[var(--muted)]">
