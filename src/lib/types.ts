@@ -247,9 +247,12 @@ export interface Issue {
   sendLog: SendLogEntry[];
 }
 
+/** Which transport actually carried a send. */
+export type MailTransport = 'resend' | 'smtp' | 'dry-run';
+
 export interface SendLogEntry {
   at: string;
-  transport: 'smtp' | 'dry-run';
+  transport: MailTransport;
   audience: AudienceTag | 'all';
   recipients: string[];
   ok: boolean;

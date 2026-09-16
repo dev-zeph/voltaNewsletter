@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureSeeded } from '@/lib/bootstrap';
 import { hasLlm } from '@/lib/llm/client';
 import { transportStatus } from '@/lib/mail';
+import { storeStatus } from '@/lib/store';
 import {
   getDirectives,
   getIssues,
@@ -48,6 +49,7 @@ export async function GET() {
       directives,
       issues,
       transport: transportStatus(),
+      store: storeStatus(),
       llm: hasLlm(),
     });
   } catch (err) {

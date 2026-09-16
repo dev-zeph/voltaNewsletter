@@ -1,8 +1,13 @@
 // ============================================================================
-// Bob — mail transport contract. Picks SMTP or dry-run and never throws.
+// Bob — mail transport contract. Picks a transport and never throws.
+//
+// Preference order: Resend, then Gmail SMTP, then a dry-run preview written to
+// disk. Resend comes first because it is the one that works from a serverless
+// function without a long-lived connection or an app password to rotate.
 // ============================================================================
 
-import type { AudienceTag } from '@/lib/types';
+import type { AudienceTag, MailTransport } from '@/lib/types';
+import { sendViaResend } from '@/lib/mail/resend';
 import { sendViaSmtp } from '@/lib/mail/smtp';
 import { sendDryRun } from '@/lib/mail/dryrun';
 
@@ -16,11 +21,16 @@ export interface SendArgs {
 
 export interface SendResult {
   ok: boolean;
-  transport: 'smtp' | 'dry-run';
+  transport: MailTransport;
   recipients: string[];
   error?: string;
   previewPath?: string;
   messageId?: string;
+}
+
+function hasResendKey(): boolean {
+  const key = process.env.RESEND_API_KEY;
+  return Boolean(key && key.trim());
 }
 
 function hasSmtpCreds(): boolean {
@@ -29,19 +39,42 @@ function hasSmtpCreds(): boolean {
   return Boolean(user && user.trim() && pass && pass.trim());
 }
 
-export function activeTransport(): 'smtp' | 'dry-run' {
-  return hasSmtpCreds() ? 'smtp' : 'dry-run';
+export function activeTransport(): MailTransport {
+  if (hasResendKey()) return 'resend';
+  if (hasSmtpCreds()) return 'smtp';
+  return 'dry-run';
+}
+
+function defaultFrom(): string {
+  if (process.env.MAIL_FROM) return process.env.MAIL_FROM;
+  if (hasResendKey()) return 'Volta <onboarding@resend.dev>';
+  const user = process.env.SMTP_USER ?? '';
+  return user ? `"Volta" <${user}>` : '"Volta" <bob@example.com>';
 }
 
 export function transportStatus(): {
-  transport: 'smtp' | 'dry-run';
+  transport: MailTransport;
   ready: boolean;
   detail: string;
   from: string;
 } {
   const transport = activeTransport();
-  const user = process.env.SMTP_USER ?? '';
-  const from = process.env.MAIL_FROM ?? (user ? `"Volta" <${user}>` : '"Volta" <bob@example.com>');
+  const from = defaultFrom();
+
+  if (transport === 'resend') {
+    const unverified = from.includes('onboarding@resend.dev');
+    return {
+      transport,
+      ready: true,
+      // Say the awkward part out loud. On an unverified domain Resend only
+      // delivers to the account owner, and a presenter needs to know that
+      // before they press Send in front of people.
+      detail: unverified
+        ? `Sending live from ${from} via Resend. This is Resend's shared test sender, so it will only reach the address that owns the Resend account. Verify a domain and set MAIL_FROM to send to the real list.`
+        : `Sending live from ${from} via Resend.`,
+      from,
+    };
+  }
 
   if (transport === 'smtp') {
     return {
@@ -56,7 +89,7 @@ export function transportStatus(): {
     transport,
     ready: true,
     detail:
-      'No SMTP credentials. Bob will write a preview file instead of sending.',
+      'No mail credentials set. Bob will write a preview file instead of sending, so nothing leaves the building.',
     from,
   };
 }
@@ -79,11 +112,12 @@ export async function sendNewsletter(args: SendArgs): Promise<SendResult> {
   }
 
   try {
-    const result = await sendViaSmtp(args);
+    const result =
+      transport === 'resend' ? await sendViaResend(args) : await sendViaSmtp(args);
     if (result.ok) return result;
 
-    // SMTP failed. Fall back to a dry-run preview so the user still gets
-    // the artifact, but keep the original error and mark it as failed.
+    // The live transport failed. Fall back to a dry-run preview so the user
+    // still gets the artifact, but keep the original error and mark it failed.
     try {
       const fallback = await sendDryRun(args);
       return {
@@ -99,17 +133,17 @@ export async function sendNewsletter(args: SendArgs): Promise<SendResult> {
       const fallback = await sendDryRun(args);
       return {
         ok: false,
-        transport: 'smtp',
+        transport,
         recipients: args.to,
-        error: `SMTP send threw unexpectedly: ${detail}`,
+        error: `${transport} send threw unexpectedly: ${detail}`,
         previewPath: fallback.previewPath,
       };
     } catch {
       return {
         ok: false,
-        transport: 'smtp',
+        transport,
         recipients: args.to,
-        error: `SMTP send threw unexpectedly: ${detail}`,
+        error: `${transport} send threw unexpectedly: ${detail}`,
       };
     }
   }
